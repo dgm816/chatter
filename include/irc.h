@@ -25,6 +25,7 @@ typedef struct Irc {
     SSL *ssl;
     SSL_CTX *ctx;
     char *channel;
+    char *nickname;
 } Irc;
 
 int irc_connect(Irc *irc, const char *host, int port, const char *nick, const char *user, const char *realname, const char *channel, int use_ssl);

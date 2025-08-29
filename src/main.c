@@ -123,6 +123,7 @@ int main(int argc, char *argv[]) {
     log_message("Channel: %s", channel);
 
     Irc irc;
+    irc.nickname = nick;
     if (irc_connect(&irc, server, port, nick, user, realname, channel, ssl) != 0) {
         log_message("ERROR: Failed to connect to IRC server");
         close_log();

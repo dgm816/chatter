@@ -149,7 +149,7 @@ void tui_run(struct Irc *irc) {
                         irc_send(irc, send_buf);
 
                         char display_buf[MAX_MSG_LEN];
-                        snprintf(display_buf, sizeof(display_buf), "<You> %s", input_buffer);
+                        snprintf(display_buf, sizeof(display_buf), "<%s> %s", irc->nickname, input_buffer);
                         add_message(display_buf);
                         scroll_offset = 0;
                         draw_main_buffer();
