@@ -1,0 +1,27 @@
+# Build directory
+build/
+
+# CMake files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+compile_commands.json
+CTestTestfile.cmake
+Makefile
+CPackConfig.cmake
+CPackSourceConfig.cmake
+
+# Executables
+chatter
+chatter_tests
+
+# Object files
+*.o
+*.obj
+
+# Log files
+*.log
+
+# OS-generated files
+.DS_Store
+Thumbs.db
