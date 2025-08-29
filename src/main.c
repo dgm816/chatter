@@ -24,6 +24,7 @@
 #include <tui.h>
 #include <signal.h>
 #include <globals.h>
+#include <version.h>
 
 volatile int running = 1;
 
@@ -51,12 +52,14 @@ int main(int argc, char *argv[]) {
         {"user", required_argument, 0, 'u'},
         {"realname", required_argument, 0, 'r'},
         {"channel", required_argument, 0, 'c'},
+        {"help", no_argument, 0, 'h'},
+        {"version", no_argument, 0, 'v'},
         {0, 0, 0, 0}
     };
 
     int opt;
     int option_index = 0;
-    while ((opt = getopt_long(argc, argv, "s:p:ln:u:r:c:", long_options, &option_index)) != -1) {
+    while ((opt = getopt_long(argc, argv, "s:p:ln:u:r:c:hv", long_options, &option_index)) != -1) {
         switch (opt) {
             case 's':
                 server = optarg;
@@ -79,8 +82,34 @@ int main(int argc, char *argv[]) {
             case 'c':
                 channel = optarg;
                 break;
+            case 'h':
+                printf("Usage: %s [OPTIONS]\n", argv[0]);
+                printf("  --server <server>  IRC server to connect to (default: irc.libera.chat)\n");
+                printf("  --port <port>      Port to connect to (default: 6697)\n");
+                printf("  --ssl              Use SSL/TLS for connection (default: enabled)\n");
+                printf("  --nick <nick>      Nickname to use (default: chatter_user)\n");
+                printf("  --user <user>      Username to use (default: chatter_user)\n");
+                printf("  --realname <name>  Real name to use (default: chatter_user)\n");
+                printf("  --channel <channel> Channel to join (default: #chatter)\n");
+                printf("  --help             Display this help message and exit\n");
+                printf("  --version          Display version information and exit\n");
+                printf("\n");
+                printf("chatter is free software; you can redistribute it and/or modify\n");
+                printf("it under the terms of the GNU General Public License as published by\n");
+                printf("the Free Software Foundation; either version 2 of the License, or\n");
+                printf("(at your option) any later version.\n");
+                exit(EXIT_SUCCESS);
+            case 'v':
+                printf("chatter v%s\n", get_chatter_version());
+                printf("\n");
+                printf("chatter is free software; you can redistribute it and/or modify\n");
+                printf("it under the terms of the GNU General Public License as published by\n");
+                printf("the Free Software Foundation; either version 2 of the License, or\n");
+                printf("(at your option) any later version.\n");
+                exit(EXIT_SUCCESS);
+            case '?': // getopt_long returns '?' for unknown options
             default:
-                fprintf(stderr, "Usage: %s [--server <server>] [--port <port>] [--ssl] [--nick <nick>] [--user <user>] [--realname <realname>] [--channel <channel>]\n", argv[0]);
+                fprintf(stderr, "Try '%s --help' for more information.\n", argv[0]);
                 exit(EXIT_FAILURE);
         }
     }

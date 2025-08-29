@@ -35,6 +35,7 @@
 #include <irc.h>
 #include <log.h>
 #include <globals.h>
+#include <version.h>
 
 // Windows
 static WINDOW *main_buffer_win;
@@ -110,6 +111,10 @@ void tui_run(struct Irc *irc) {
 
     snprintf(current_status, sizeof(current_status), "[Connected to %s]", irc->channel);
     snprintf(current_status, sizeof(current_status), "[Connected to %s]", irc->channel);
+
+    char version_msg[64];
+    snprintf(version_msg, sizeof(version_msg), "chatter v%s", get_chatter_version());
+    add_message(version_msg);
 
     draw_main_buffer();
     tui_refresh_all(input_buffer, input_pos);
