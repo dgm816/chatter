@@ -58,8 +58,10 @@ static void update_status_bar(const char *status);
 static void sigwinch_handler(int signum);
 static void draw_buffer_list(void);
 static void handle_scroll(int page_size);
+static void tui_redraw(void);
 
 static char current_status[128] = "[Disconnected]";
+static volatile sig_atomic_t resize_pending = 0;
 
 /**
  * @brief Initializes the terminal user interface.
@@ -74,6 +76,7 @@ void tui_init(void) {
     noecho();
     keypad(stdscr, TRUE);
     curs_set(0);
+    signal(SIGWINCH, sigwinch_handler);
 
     if (!has_colors()) {
         endwin();
@@ -90,7 +93,6 @@ void tui_init(void) {
     // Draw initial layout
     tui_draw_layout();
 
-    signal(SIGWINCH, sigwinch_handler);
 }
 
 /**
@@ -244,6 +246,11 @@ void tui_run(struct Irc *irc, const char *channel) {
     static bool registered = false;
 
     while (running) {
+        if (resize_pending) {
+            resize_pending = 0;
+            tui_redraw();
+            tui_refresh_all(input_buffer, input_pos);
+        }
         fd_set fds;
         FD_ZERO(&fds);
         FD_SET(0, &fds);
@@ -489,23 +496,32 @@ static void tui_refresh_all(const char *input_buffer, int input_pos) {
     doupdate();
 }
 
-static void tui_redraw(void) {
-    int height, width;
-    getmaxyx(stdscr, height, width);
-
-    // End the current ncurses session and restart it to handle resize properly
-    endwin();
-    refresh();
-    clear();
-
-    // Re-initialize windows with new dimensions
-    tui_draw_layout();
-
-    // Redraw everything
-    tui_refresh_all("", 0);
+static void sigwinch_handler(int signum) {
+    if (signum == SIGWINCH) {
+        resize_pending = 1;
+    }
 }
 
-static void sigwinch_handler(int signum) {
-    (void)signum;
-    tui_redraw();
+static void tui_redraw(void) {
+    // The most reliable way to handle a resize is to completely
+    // re-initialize the ncurses environment.
+    endwin();
+    refresh();
+
+    // Re-initialize ncurses, which will query the terminal for its new size.
+    initscr();
+    raw();
+    noecho();
+    keypad(stdscr, TRUE);
+    curs_set(1); // Set cursor for the input line
+
+    // Re-initialize colors
+    if (has_colors()) {
+        start_color();
+        init_pair(1, COLOR_WHITE, COLOR_BLUE); // Status bar color
+        init_pair(2, COLOR_BLACK, COLOR_CYAN); // Active buffer color
+    }
+
+    // Re-create the entire layout from scratch.
+    tui_draw_layout();
 }
