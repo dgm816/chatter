@@ -56,22 +56,48 @@ static void handle_join_command(Irc *irc, const char **args, buffer_node_t *acti
 
 static void handle_part_command(Irc *irc, const char **args, buffer_node_t *active_buffer) {
     const char *channel_to_part = NULL;
+    char part_message_buf[MAX_MSG_LEN] = {0};
     const char *part_message = "";
+    int message_arg_start_index = -1;
 
-    // Determine the channel to part
-    if (args[0]) {
+    if (args[0] && get_buffer_by_name(args[0]) != NULL) {
+        // First argument is a channel
         channel_to_part = args[0];
-        if (args[1]) {
-            part_message = args[1];
-        }
+        message_arg_start_index = 1;
     } else {
+        // First argument is not a channel, or no arguments
         if (active_buffer && active_buffer->name[0] == '#') {
             channel_to_part = active_buffer->name;
+            if (args[0]) {
+                message_arg_start_index = 0;
+            }
         } else {
-            // Error: /part used in non-channel buffer without specifying a channel
-            buffer_append_message(get_buffer_by_name("status"), "Usage: /part [#channel] [message]");
+            // /part used in non-channel buffer. A channel must be specified.
+            if (args[0] == NULL) {
+                buffer_append_message(get_buffer_by_name("status"), "Usage: /part [#channel] [message]");
+                return;
+            }
+
+            // If we are here, it means args[0] was given, but it's not a valid channel
+            // because the initial check `get_buffer_by_name(args[0])` failed.
+            char error_msg[MAX_MSG_LEN];
+            snprintf(error_msg, sizeof(error_msg), "Invalid channel: %s", args[0]);
+            buffer_append_message(get_buffer_by_name("status"), error_msg);
             return;
         }
+    }
+
+    if (message_arg_start_index != -1) {
+        int offset = 0;
+        for (int i = message_arg_start_index; args[i] != NULL; i++) {
+            int written = snprintf(part_message_buf + offset, sizeof(part_message_buf) - offset, "%s%s", (i > message_arg_start_index ? " " : ""), args[i]);
+            if (written < 0 || (size_t)written >= sizeof(part_message_buf) - offset) {
+                // Message truncated
+                break;
+            }
+            offset += written;
+        }
+        part_message = part_message_buf;
     }
 
     // Send the PART command
