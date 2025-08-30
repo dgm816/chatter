@@ -45,5 +45,6 @@ void buffer_append_message(buffer_node_t *buffer, const char *message);
 buffer_node_t* get_buffer_by_name(const char *name);
 void set_active_buffer(buffer_node_t *buffer);
 void buffer_free(buffer_node_t *buffer);
+void remove_buffer(buffer_node_t *buffer);
 
 #endif // BUFFER_H

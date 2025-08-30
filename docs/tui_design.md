@@ -90,6 +90,7 @@ graph TD
     *   If it's a command (e.g., `/quit`), the command is executed locally.
     *   If it's a message, it's sent to the `irc` module to be transmitted to the server.
 5.  The input line is cleared for new input.
+6.  To prevent rendering artifacts and flickering, any user input that modifies the screen state triggers a full refresh of the entire TUI.
 
 ## 5. Event Handling
 
@@ -97,7 +98,7 @@ The application will run in a main loop that waits for input from two sources:
 1.  **User Input:** From `stdin` (managed by ncurses `getch()`).
 2.  **Network Input:** From the IRC server socket.
 
-A `select()` or `poll()` call will be used to monitor both file descriptors simultaneously, ensuring the UI remains responsive while waiting for network messages.
+A `select()` or `poll()` call will be used to monitor both file descriptors simultaneously, ensuring the UI remains responsive while waiting for network messages. The main loop triggers a complete redraw of all windows whenever a `needs_refresh` flag is set by the input handler or the IRC message processor. This ensures the screen is always in a consistent state.
 
 *   **`ctrl-c`:** A signal handler for `SIGINT` will be installed to ensure a clean shutdown of ncurses and the network connection.
 *   **`/quit` command:** This will trigger the same clean shutdown procedure.
@@ -183,7 +184,7 @@ The user will be able to switch between buffers using the `Alt-j` and `Alt-k` ke
 linked list. The `active` flag will be updated, and the main buffer window will be
 refreshed to display the content of the newly active buffer. If the current buffer is the
 end of the list, it will wrap around to the beginning.
-*   **`Alt-k` (Previous Buffer):** Pressing `Alt-k` will navigate to the previous buffer in the linked list. The logic is similar to `Alt-j`, wrapping around to the start if the end of the list is reached.
+*   **`Alt-k` (Previous Buffer):** Pressing `Alt-k` will navigate to the previous buffer in the linked list. The logic is similar to `Alt-j`, wrapping around to the end if the beginning of the list is reached.
 
 The key handling logic will be implemented in the main event loop in `tui.c`.
 
@@ -222,7 +223,7 @@ void set_active_buffer(buffer_node_t *buffer);
 void tui_init(void);
 void tui_draw_layout(void); // Will be updated for the new layout
 void tui_refresh_main_buffer(void);
-void tui_handle_input(int ch); // Will handle F1/F2 keys
+void tui_handle_input(int ch, char *input_buffer, size_t buffer_size, int *input_pos, struct Irc *irc, bool *needs_refresh);
 ```
 
 **`irc.h`**

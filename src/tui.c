@@ -37,6 +37,7 @@
 #include <globals.h>
 #include <version.h>
 #include <buffer.h>
+#include <commands.h>
 
 // Windows
 static WINDOW *buffer_list_win;
@@ -54,6 +55,7 @@ static WINDOW *main_buffer_pad;
 // Function prototypes
 static void tui_draw_borders(void);
 static void tui_refresh_all(const char *input_buffer, int input_pos);
+static void tui_refresh_input_line(const char *input_buffer, int input_pos);
 static void update_status_bar(const char *status);
 static void sigwinch_handler(int signum);
 static void draw_buffer_list(void);
@@ -330,28 +332,27 @@ void tui_run(struct Irc *irc, const char *channel) {
  * @param needs_refresh Pointer to a boolean indicating if the screen needs refresh.
  */
 void tui_handle_input(int ch, char *input_buffer, size_t buffer_size, int *input_pos, struct Irc *irc, bool *needs_refresh) {
-    *needs_refresh = true;
+    *needs_refresh = true; // Default to refreshing on any input
     if (ch == '\n') {
         if (strcmp(input_buffer, "/quit") == 0) {
             running = 0;
+        } else if (input_buffer[0] == '/') {
+            parse_command(irc, input_buffer, active_buffer);
         } else if (strlen(input_buffer) > 0) {
             char send_buf[MAX_MSG_LEN];
             char display_buf[MAX_MSG_LEN];
 
             if (active_buffer && strcmp(active_buffer->name, "status") == 0) {
-                // Server buffer active, send raw command
                 snprintf(send_buf, sizeof(send_buf), "%s\r\n", input_buffer);
                 irc_send(irc, send_buf);
-                // The irc_send function will print the command to the server buffer
             } else if (active_buffer) {
-                // Channel or private message buffer active, send PRIVMSG
                 snprintf(send_buf, sizeof(send_buf), "PRIVMSG %s :%s\r\n", active_buffer->name, input_buffer);
                 irc_send(irc, send_buf);
                 snprintf(display_buf, sizeof(display_buf), "<%s> %s", irc->nickname, input_buffer);
                 buffer_append_message(active_buffer, display_buf);
             }
         }
-        memset(input_buffer, 0, sizeof(input_buffer));
+        memset(input_buffer, 0, buffer_size);
         *input_pos = 0;
     } else if (ch == KEY_BACKSPACE || ch == 127) {
         if (*input_pos > 0) {
@@ -359,40 +360,29 @@ void tui_handle_input(int ch, char *input_buffer, size_t buffer_size, int *input
             input_buffer[*input_pos] = '\0';
         }
     } else if (ch == KEY_PPAGE) {
-        int height, width;
-        getmaxyx(main_buffer_win, height, width);
-        handle_scroll(-((height - 2) / 2));
+        handle_scroll(-((getmaxy(main_buffer_win) - 2) / 2));
     } else if (ch == KEY_NPAGE) {
-        int height, width;
-        getmaxyx(main_buffer_win, height, width);
-        handle_scroll((height - 2) / 2);
+        handle_scroll((getmaxy(main_buffer_win) - 2) / 2);
     } else if (ch == KEY_SPPAGE) {
-        int height, width;
-        getmaxyx(main_buffer_win, height, width);
-        handle_scroll(-(height - 2));
+        handle_scroll(-(getmaxy(main_buffer_win) - 2));
     } else if (ch == KEY_SNPAGE) {
-        int height, width;
-        getmaxyx(main_buffer_win, height, width);
-        handle_scroll(height - 2);
+        handle_scroll(getmaxy(main_buffer_win) - 2);
     } else if (ch == 27) { // Alt key
         int next_ch = getch();
         if (next_ch == 'j') {
-            if (active_buffer && active_buffer->prev) {
-                set_active_buffer(active_buffer->prev);
-            }
+            if (active_buffer && active_buffer->next) set_active_buffer(active_buffer->next);
         } else if (next_ch == 'k') {
-            if (active_buffer && active_buffer->next) {
-                set_active_buffer(active_buffer->next);
-            }
+            if (active_buffer && active_buffer->prev) set_active_buffer(active_buffer->prev);
         }
-    } else if (ch >= 32 && ch <= 126) {
+    } else if (isprint(ch)) {
         if (*input_pos < (buffer_size - 1)) {
             input_buffer[(*input_pos)++] = ch;
+            input_buffer[*input_pos] = '\0';
         }
     } else if (ch == 3) { // Ctrl-C
         running = 0;
     } else {
-        *needs_refresh = false;
+        *needs_refresh = false; // Don't refresh for unhandled characters
     }
 }
 
@@ -488,10 +478,7 @@ static void tui_refresh_all(const char *input_buffer, int input_pos) {
     wnoutrefresh(status_bar_win);
 
     // Redraw input line
-    wclear(input_line_win);
-    mvwprintw(input_line_win, 0, 0, "> %s", input_buffer);
-    wmove(input_line_win, 0, input_pos + 2);
-    wnoutrefresh(input_line_win);
+    tui_refresh_input_line(input_buffer, input_pos);
 
     doupdate();
 }
@@ -524,4 +511,11 @@ static void tui_redraw(void) {
 
     // Re-create the entire layout from scratch.
     tui_draw_layout();
+}
+
+static void tui_refresh_input_line(const char *input_buffer, int input_pos) {
+    wclear(input_line_win);
+    mvwprintw(input_line_win, 0, 0, "> %s", input_buffer);
+    wmove(input_line_win, 0, input_pos + 2);
+    wnoutrefresh(input_line_win);
 }

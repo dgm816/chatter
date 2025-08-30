@@ -31,8 +31,8 @@ This project is licensed under the [GNU General Public License v2](LICENSE).
 
 ## Keybindings
 
-*   `Alt-k`: Move up the buffer list.
-*   `Alt-j`: Move down the buffer list.
+*   `Alt-j`: Move to the next buffer (down the list).
+*   `Alt-k`: Move to the previous buffer (up the list).
 *   `Page Up`: Scroll up by half a page in the main buffer.
 *   `Page Down`: Scroll down by half a page in the main buffer.
 *   `Shift+Page Up`: Scroll up by a full page in the main buffer.

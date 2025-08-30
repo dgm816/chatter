@@ -191,3 +191,31 @@ void buffer_free(buffer_node_t *buffer) {
     // Free the buffer struct itself
     free(buffer);
 }
+/**
+ * @brief Removes a buffer from the global buffer list.
+ * @param buffer The buffer to remove.
+ */
+void remove_buffer(buffer_node_t *buffer) {
+    if (!buffer || !buffer_list_head) {
+        return;
+    }
+
+    if (buffer == active_buffer) {
+        // If we're removing the active buffer, switch to the next one
+        set_active_buffer(buffer->next);
+    }
+
+    if (buffer == buffer_list_head) {
+        if (buffer->next == buffer) {
+            // This is the last buffer
+            buffer_list_head = NULL;
+        } else {
+            buffer_list_head = buffer->next;
+        }
+    }
+
+    buffer->prev->next = buffer->next;
+    buffer->next->prev = buffer->prev;
+
+    buffer_free(buffer);
+}

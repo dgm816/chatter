@@ -323,18 +323,33 @@ int irc_process_buffer(Irc *irc, bool *needs_refresh, char *out_command_buf, int
                     }
                 }
             } else if (strcmp(command, "JOIN") == 0 && params) {
-                char *joined_channel = params;
-                while (isspace((unsigned char)*joined_channel)) joined_channel++;
-                buffer_node_t *channel_buffer = get_buffer_by_name(joined_channel);
-                if (!channel_buffer) {
-                    channel_buffer = create_buffer(joined_channel);
-                    add_buffer(channel_buffer);
+                char *joined_channel_param = params;
+                if (joined_channel_param[0] == ':') {
+                    joined_channel_param++;
                 }
-                // Only append to channel buffer if it's not the status buffer
-                // as the raw line is already appended to status buffer
-                if (channel_buffer != status_buf) {
-                    buffer_append_message(channel_buffer, "--- Joined channel ---");
-                    if (channel_buffer == active_buffer) {
+
+                char *sender_nick = prefix;
+                if (sender_nick) {
+                    char *excl = strchr(sender_nick, '!');
+                    if (excl) *excl = '\0';
+                    if (strcmp(sender_nick, irc->nickname) == 0) {
+                        buffer_node_t *channel_buffer = get_buffer_by_name(joined_channel_param);
+                        if (!channel_buffer) {
+                            channel_buffer = create_buffer(joined_channel_param);
+                            add_buffer(channel_buffer);
+                            set_active_buffer(channel_buffer);
+                            *needs_refresh = true;
+                        }
+                    }
+                }
+            } else if (strcmp(command, "NOTICE") == 0 && params) {
+                // Notices are typically sent to the server buffer
+                buffer_node_t *server_buffer = get_buffer_by_name("status");
+                if (server_buffer) {
+                    char formatted_msg[MAX_MSG_LEN];
+                    snprintf(formatted_msg, sizeof(formatted_msg), "-!- %s", params);
+                    buffer_append_message(server_buffer, formatted_msg);
+                    if (server_buffer == active_buffer) {
                         *needs_refresh = true;
                     }
                 }
