@@ -139,12 +139,25 @@ void parse_command(Irc *irc, const char *input, buffer_node_t *active_buffer) {
     }
 
     if (input[1] == '/') {
-        // Treat as a regular message
-        char *message = strdup(input + 1);
-        // This part will need to be integrated with the main message sending logic
-        // For now, we'll just print it.
-        printf("Message to send: %s\n", message);
-        free(message);
+        // Handle escaped slash command as a regular message
+        if (active_buffer && active_buffer->name[0] == '#') {
+            char send_buf[MAX_MSG_LEN];
+            snprintf(send_buf, sizeof(send_buf), "PRIVMSG %s :%s\r\n", active_buffer->name, input + 1);
+            irc_send(irc, send_buf);
+
+            // Also append the message to the local buffer
+            char formatted_msg[MAX_MSG_LEN];
+            snprintf(formatted_msg, sizeof(formatted_msg), "<%s> %s", irc->nickname, input + 1);
+            buffer_append_message(active_buffer, formatted_msg);
+        } else {
+            // Send as a raw command
+            char send_buf[MAX_MSG_LEN];
+            snprintf(send_buf, sizeof(send_buf), "%s\r\n", input + 1);
+            irc_send(irc, send_buf);
+
+            // Also append the command to the active buffer for local feedback
+            buffer_append_message(active_buffer, input + 1);
+        }
         return;
     }
 
@@ -169,13 +182,21 @@ void parse_command(Irc *irc, const char *input, buffer_node_t *active_buffer) {
     args[arg_count] = NULL;
 
     // Find and execute command
+    int command_found = 0;
     for (int i = 0; i < num_command_defs; i++) {
         if (strcmp(command_name, command_defs[i].name) == 0) {
             // Argument validation would go here
             // Correctly cast the handler
             command_defs[i].handler(irc, args, active_buffer);
+            command_found = 1;
             break;
         }
+    }
+
+    if (!command_found) {
+        char error_msg[MAX_MSG_LEN];
+        snprintf(error_msg, sizeof(error_msg), "Unknown command: /%s", command_name);
+        buffer_append_message(get_buffer_by_name("status"), error_msg);
     }
 
     free(work_str);
