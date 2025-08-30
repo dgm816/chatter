@@ -26,6 +26,7 @@
 // Forward declarations for command handlers
 static void handle_join_command(Irc *irc, const char **args, buffer_node_t *active_buffer);
 static void handle_part_command(Irc *irc, const char **args, buffer_node_t *active_buffer);
+static void handle_nick(Irc *irc, const char **args, buffer_node_t *active_buffer);
 
 // Example command definitions
 const command_arg join_args[] = {
@@ -37,9 +38,14 @@ const command_arg part_args[] = {
     {"message", ARG_TYPE_STRING, ARG_NECESSITY_OPTIONAL}
 };
 
+const command_arg nick_args[] = {
+    {"nickname", ARG_TYPE_NICKNAME, ARG_NECESSITY_OPTIONAL}
+};
+
 const command_def command_defs[] = {
     {"join", (void (*)(Irc*, const char**, buffer_node_t*))handle_join_command, join_args, sizeof(join_args) / sizeof(command_arg)},
-    {"part", (void (*)(Irc*, const char**, buffer_node_t*))handle_part_command, part_args, sizeof(part_args) / sizeof(command_arg)}
+    {"part", (void (*)(Irc*, const char**, buffer_node_t*))handle_part_command, part_args, sizeof(part_args) / sizeof(command_arg)},
+    {"nick", (void (*)(Irc*, const char**, buffer_node_t*))handle_nick, nick_args, sizeof(nick_args) / sizeof(command_arg)}
 };
 
 const int num_command_defs = sizeof(command_defs) / sizeof(command_def);
@@ -115,6 +121,16 @@ static void handle_part_command(Irc *irc, const char **args, buffer_node_t *acti
     if (buffer_to_remove) {
         remove_buffer(buffer_to_remove);
     }
+}
+
+static void handle_nick(Irc *irc, const char **args, buffer_node_t *active_buffer) {
+    if (args[0] == NULL) {
+        buffer_append_message(get_buffer_by_name("status"), "Usage: /nick <new_nickname>");
+        return;
+    }
+    char send_buf[MAX_MSG_LEN];
+    snprintf(send_buf, sizeof(send_buf), "NICK %s\r\n", args[0]);
+    irc_send(irc, send_buf);
 }
 
 void parse_command(Irc *irc, const char *input, buffer_node_t *active_buffer) {

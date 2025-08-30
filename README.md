@@ -25,6 +25,10 @@ This project uses CMake for its build system. To build the project, follow these
    make
    ```
 
+## Commands
+
+* `/nick &lt;new_nickname&gt;` - Changes your nickname on the server.
+
 ## License
 
 This project is licensed under the [GNU General Public License v2](LICENSE).

@@ -87,8 +87,10 @@ graph TD
 2.  The TUI captures key presses in the main event loop.
 3.  Input is appended to an input buffer.
 4.  On pressing `Enter`, the input buffer is processed:
-    *   If it's a command (e.g., `/quit`), the command is executed locally.
-    *   If it's a message, it's sent to the `irc` module to be transmitted to the server.
+    *   If it's a command (starting with `/`), it is handled by the command processor.
+        *   `/quit`: Triggers a clean shutdown of the client.
+        *   `/nick <new_nickname>`: Changes your nickname on the server.
+    *   If it's a regular message, it's sent to the `irc` module to be transmitted to the server.
 5.  The input line is cleared for new input.
 6.  To prevent rendering artifacts and flickering, any user input that modifies the screen state triggers a full refresh of the entire TUI.
 
@@ -102,6 +104,7 @@ A `select()` or `poll()` call will be used to monitor both file descriptors simu
 
 *   **`ctrl-c`:** A signal handler for `SIGINT` will be installed to ensure a clean shutdown of ncurses and the network connection.
 *   **`/quit` command:** This will trigger the same clean shutdown procedure.
+*   **`/nick` command:** Changes the user's nickname.
 
 ## 6. Core Implementation Plan
 

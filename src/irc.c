@@ -362,7 +362,55 @@ int irc_process_buffer(Irc *irc, bool *needs_refresh, char *out_command_buf, int
                         *needs_refresh = true;
                     }
                 }
-            }
+            } else if (strcmp(command, "NICK") == 0 && prefix && params) {
+               char *old_nick = prefix;
+               char *excl = strchr(old_nick, '!');
+               if (excl) *excl = '\0';
+
+               if (strcmp(old_nick, irc->nickname) == 0) {
+                   char *new_nick = params;
+                   if (new_nick[0] == ':') {
+                       new_nick++;
+                   }
+
+                   free(irc->nickname);
+                   irc->nickname = strdup(new_nick);
+
+                   // Announce nick change in all channel buffers
+                   char nick_change_msg[MAX_MSG_LEN];
+                   snprintf(nick_change_msg, sizeof(nick_change_msg), "-!- %s is now known as %s", old_nick, irc->nickname);
+                   
+                   if (buffer_list_head) {
+                       buffer_node_t *current = buffer_list_head;
+                       do {
+                           if (current->name && current->name[0] == '#') {
+                               buffer_append_message(current, nick_change_msg);
+                           }
+                           current = current->next;
+                       } while (current != buffer_list_head);
+                   }
+                   *needs_refresh = true;
+               }
+           } else if (strcmp(command, "433") == 0 && params) {
+               // Nickname in use error
+               buffer_node_t *server_buffer = get_buffer_by_name("status");
+               if (server_buffer) {
+                   char *failed_nick = strchr(params, ' ');
+                   if (failed_nick) {
+                       failed_nick++; // Move past space
+                       char *end_of_nick = strchr(failed_nick, ' ');
+                       if (end_of_nick) {
+                           *end_of_nick = '\0';
+                       }
+                       char error_msg[MAX_MSG_LEN];
+                       snprintf(error_msg, sizeof(error_msg), "-!- Nickname '%s' is already in use.", failed_nick);
+                       buffer_append_message(server_buffer, error_msg);
+                       if (server_buffer == active_buffer) {
+                           *needs_refresh = true;
+                       }
+                   }
+               }
+           }
         }
         current_pos = line_end + 2; // Move past the \r\n
     }
