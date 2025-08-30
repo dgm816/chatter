@@ -21,6 +21,14 @@
 #include <openssl/ssl.h>
 #include <stdbool.h>
 
+typedef enum {
+    IRC_STATE_DISCONNECTED,
+    IRC_STATE_CONNECTING,
+    IRC_STATE_CONNECTED,
+    IRC_STATE_REGISTERING,
+    IRC_STATE_REGISTERED
+} IrcConnectionState;
+
 typedef struct Irc {
     int sock;
     SSL *ssl;
@@ -33,11 +41,14 @@ typedef struct Irc {
     char *recv_buffer;
     size_t recv_buffer_len;
     size_t recv_buffer_capacity;
+    IrcConnectionState state;
 } Irc;
 
+void irc_init(Irc *irc);
 int irc_connect(Irc *irc, const char *host, int port, const char *nick, const char *user, const char *realname, const char *channel, int use_ssl);
 void irc_disconnect(Irc *irc);
 int irc_send(Irc *irc, const char *data);
-int irc_recv(Irc *irc, char *buf, int size, bool *needs_refresh, char *out_command_buf, int out_command_buf_size);
+int irc_process_buffer(Irc *irc, bool *needs_refresh, char *out_command_buf, int out_command_buf_size);
+int irc_recv(Irc *irc);
 
 #endif // IRC_H

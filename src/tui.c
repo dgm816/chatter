@@ -242,9 +242,6 @@ void tui_run(struct Irc *irc, const char *channel) {
 
     tui_refresh_all(input_buffer, input_pos);
 
-    static bool initial_commands_sent = false;
-    static bool registered = false;
-
     while (running) {
         if (resize_pending) {
             resize_pending = 0;
@@ -254,7 +251,9 @@ void tui_run(struct Irc *irc, const char *channel) {
         fd_set fds;
         FD_ZERO(&fds);
         FD_SET(0, &fds);
-        FD_SET(irc->sock, &fds);
+        if (irc->state != IRC_STATE_DISCONNECTED) {
+            FD_SET(irc->sock, &fds);
+        }
 
         int max_fd = irc->sock;
         if (select(max_fd + 1, &fds, NULL, NULL, NULL) == -1) {
@@ -274,16 +273,20 @@ void tui_run(struct Irc *irc, const char *channel) {
             }
         }
 
-        if (FD_ISSET(irc->sock, &fds)) {
-            char recv_buf[MAX_MSG_LEN];
-            char command_buf[16]; // Buffer to store the IRC command (e.g., "001", "PRIVMSG")
+        if (irc->state != IRC_STATE_DISCONNECTED && FD_ISSET(irc->sock, &fds)) {
+            if (irc_recv(irc) <= 0) {
+                log_message("Connection closed.");
+                irc->state = IRC_STATE_DISCONNECTED;
+                running = 0;
+                continue;
+            }
+            
+            char command_buf[16];
             memset(command_buf, 0, sizeof(command_buf));
+            irc_process_buffer(irc, &needs_refresh, command_buf, sizeof(command_buf));
 
-            int n = irc_recv(irc, recv_buf, sizeof(recv_buf) - 1, &needs_refresh, command_buf, sizeof(command_buf));
-            if (n > 0) {
-                recv_buf[n] = '\0';
-
-                if (!initial_commands_sent) {
+            switch (irc->state) {
+                case IRC_STATE_CONNECTED: {
                     char buf[512];
                     snprintf(buf, sizeof(buf), "NICK %s\r\n", irc->nickname);
                     if (irc_send(irc, buf) < 0) {
@@ -293,21 +296,18 @@ void tui_run(struct Irc *irc, const char *channel) {
                     if (irc_send(irc, buf) < 0) {
                         log_message("ERROR: Failed to send USER");
                     }
-                    initial_commands_sent = true;
+                    irc->state = IRC_STATE_REGISTERING;
+                    break;
                 }
-
-                // Check for 001 (RPL_WELCOME) or 376 (RPL_ENDOFMOTD) and send JOIN
-                if (!registered && (strcmp(command_buf, "001") == 0 || strcmp(command_buf, "376") == 0)) {
-                    char buf[512];
-                    snprintf(buf, sizeof(buf), "JOIN %s\r\n", channel);
-                    if (irc_send(irc, buf) < 0) {
-                        log_message("ERROR: Failed to send JOIN");
-                    }
-                    registered = true;
-                }
-            } else {
-                log_message("Connection closed.");
-                running = 0;
+                case IRC_STATE_REGISTERING:
+                    // This state is now handled in irc_process_buffer
+                    break;
+                case IRC_STATE_REGISTERED:
+                    // Normal operation
+                    break;
+                default:
+                    // Do nothing
+                    break;
             }
         }
 
