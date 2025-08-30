@@ -19,6 +19,7 @@
 #define IRC_H
 
 #include <openssl/ssl.h>
+#include <stdbool.h>
 
 typedef struct Irc {
     int sock;
@@ -26,11 +27,17 @@ typedef struct Irc {
     SSL_CTX *ctx;
     char *channel;
     char *nickname;
+    char *server;
+    char *username;
+    char *realname;
+    char *recv_buffer;
+    size_t recv_buffer_len;
+    size_t recv_buffer_capacity;
 } Irc;
 
 int irc_connect(Irc *irc, const char *host, int port, const char *nick, const char *user, const char *realname, const char *channel, int use_ssl);
 void irc_disconnect(Irc *irc);
 int irc_send(Irc *irc, const char *data);
-int irc_recv(Irc *irc, char *buf, int size);
+int irc_recv(Irc *irc, char *buf, int size, bool *needs_refresh, char *out_command_buf, int out_command_buf_size);
 
 #endif // IRC_H

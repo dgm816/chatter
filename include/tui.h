@@ -18,6 +18,9 @@
 #ifndef TUI_H
 #define TUI_H
 
+#include <stdbool.h>
+#include <irc.h>
+
 /**
  * @brief Initializes the terminal user interface.
  *
@@ -26,6 +29,9 @@
  * for interaction.
  */
 void tui_init(void);
+void tui_draw_layout(void);
+void tui_refresh_main_buffer(void);
+void tui_handle_input(int ch, char *input_buffer, size_t buffer_size, int *input_pos, struct Irc *irc, bool *needs_refresh);
 
 /**
  * @brief Tears down the terminal user interface.
@@ -41,8 +47,6 @@ void tui_destroy(void);
  * This function handles user input, updates the screen, and manages
  * the overall flow of the user interface.
  */
-struct Irc;
-
-void tui_run(struct Irc *irc);
+void tui_run(struct Irc *irc, const char *channel);
 
 #endif // TUI_H

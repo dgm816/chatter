@@ -22,6 +22,7 @@
 #include <log.h>
 #include <irc.h>
 #include <tui.h>
+#include <buffer.h>
 #include <signal.h>
 #include <globals.h>
 #include <version.h>
@@ -122,16 +123,21 @@ int main(int argc, char *argv[]) {
     log_message("Realname: %s", realname);
     log_message("Channel: %s", channel);
 
+    tui_init();
+
     Irc irc;
+    irc.server = server;
     irc.nickname = nick;
+    irc.username = user;
+    irc.realname = realname;
     if (irc_connect(&irc, server, port, nick, user, realname, channel, ssl) != 0) {
         log_message("ERROR: Failed to connect to IRC server");
+        tui_destroy(); // Clean up TUI resources before exiting
         close_log();
         return 1;
     }
 
-    tui_init();
-    tui_run(&irc);
+    tui_run(&irc, channel);
     tui_destroy();
 
     irc_disconnect(&irc);

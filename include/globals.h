@@ -20,4 +20,6 @@
 
 extern volatile int running;
 
+#define MAX_MSG_LEN 512
+
 #endif // GLOBALS_H

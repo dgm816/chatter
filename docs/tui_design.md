@@ -120,3 +120,114 @@ Here is a proposed plan for implementing the TUI.
 *   **Multiple Channels/Windows:** The design could be extended to support multiple chat windows or channels, perhaps using a tabbed interface.
 *   **UTF-8 Support:** The ncursesw library (`-lncursesw`) should be used to handle UTF-8 characters correctly.
 *   **Configuration:** Colors and other UI elements could be made configurable.
+
+## 8. Buffer List Feature
+
+To enhance modularity and user experience, the Chatter client will be updated to support multiple message buffers. This will allow users to switch between different contexts, such as the server status window and individual channel or private message conversations.
+
+### 8.1. Data Structures
+
+A flexible data structure will be implemented to manage the list of buffers. A doubly linked list is proposed to allow for efficient traversal in both directions (e.g., with `Alt-j` and `Alt-k` keys).
+
+Each node in the linked list will be a `struct` representing a buffer:
+
+```c
+// Proposed for a new buffer.h header
+typedef struct buffer_node {
+    char *name;                 // e.g., "status", "#channel", "user"
+    char **lines;               // Dynamically allocated array of strings for buffer content
+    int line_count;             // Number of lines in the buffer
+    int capacity;               // Current capacity of the lines array
+    int active;                 // Flag (1 for active, 0 for inactive)
+    struct buffer_node *prev;
+    struct buffer_node *next;
+} buffer_node_t;
+
+// Global handle to the list of buffers
+extern buffer_node_t *buffer_list_head;
+extern buffer_node_t *active_buffer;
+```
+
+This structure will be defined in a new `buffer.h` file, and the buffer management functions will be implemented in a corresponding `buffer.c`.
+
+### 8.2. TUI Layout Changes
+
+The TUI layout will be updated to include a new pane on the left side of the screen to display the list of available buffers.
+
+*   **Buffer List Pane:** A 16-character wide pane on the left, extending the full height of the terminal.
+*   **Main Buffer:** Occupies the top section of the remaining screen area, to the right of the buffer list.
+*   **Status Bar & Input Line:** Positioned below the main buffer, to the right of the buffer list.
+
+The updated layout will be managed in `tui.c`.
+
+```
++----------------+-------------------------------------------------------------+
+|                |                                                             |
+|  Buffer List   |                    Main Buffer                              |
+| (16 chars wide,|              (Displays active buffer's content)             |
+|  full height)  |                                                             |
+|                |                                                             |
+|                |                                                             |
+|                +-------------------------------------------------------------+
+|                | Status Bar (e.g., [Connected] #channel)                     |
+|                +-------------------------------------------------------------+
+|                | > Input Line (User types here)                              |
++----------------+-------------------------------------------------------------+
+```
+
+### 8.3. Buffer Switching
+
+The user will be able to switch between buffers using the `Alt-j` and `Alt-k` keys.
+
+*   **`Alt-j` (Next Buffer):** Pressing `Alt-j` will navigate to the next buffer in the
+linked list. The `active` flag will be updated, and the main buffer window will be
+refreshed to display the content of the newly active buffer. If the current buffer is the
+end of the list, it will wrap around to the beginning.
+*   **`Alt-k` (Previous Buffer):** Pressing `Alt-k` will navigate to the previous buffer in the linked list. The logic is similar to `Alt-j`, wrapping around to the start if the end of the list is reached.
+
+The key handling logic will be implemented in the main event loop in `tui.c`.
+
+### 8.4. Message Routing
+
+A new mechanism will be introduced to route incoming messages to the appropriate buffer.
+
+1.  **Message Capture:** The `irc.c` module will capture all incoming messages from the server (e.g., `PRIVMSG`).
+2.  **Buffer Identification:** A new function, `get_buffer_for_message(char *target)`, will determine the correct buffer for the message. For instance, a message to `#chatter` goes to the `#chatter` buffer. If a buffer doesn't exist, a new one will be created.
+3.  **Message Appending:** The message will be passed to a new function, `buffer_append_message(buffer_node_t *buffer, const char *message)`, which will add the message to the buffer's `lines` array, handling memory allocation as needed.
+4.  **TUI Refresh:** If the message is for the currently active buffer, the main buffer window will be refreshed to display it.
+
+### 8.5. Function Signatures
+
+The following new or modified function signatures will be required:
+
+**`buffer.h` (New File)**
+```c
+#ifndef BUFFER_H
+#define BUFFER_H
+
+// Buffer management functions
+void buffer_list_init(void);
+buffer_node_t* create_buffer(const char *name);
+void add_buffer(buffer_node_t *buffer);
+void buffer_append_message(buffer_node_t *buffer, const char *message);
+buffer_node_t* get_buffer_by_name(const char *name);
+void set_active_buffer(buffer_node_t *buffer);
+
+#endif // BUFFER_H
+```
+
+**`tui.h`**
+```c
+// Modified functions
+void tui_init(void);
+void tui_draw_layout(void); // Will be updated for the new layout
+void tui_refresh_main_buffer(void);
+void tui_handle_input(int ch); // Will handle F1/F2 keys
+```
+
+**`irc.h`**
+```c
+// No new public functions needed, but internal logic will change to call buffer management functions.
+```
+
+This design provides a solid foundation for implementing the buffer list feature. The separation of concerns between `tui.c`, `irc.c`, and the new `buffer.c` will help maintain a clean and extensible architecture.
