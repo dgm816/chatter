@@ -4,6 +4,8 @@
 
 The command parsing system in `chatter` provides a structured way to handle user commands entered in the TUI. All commands are prefixed with a forward slash (`/`). The system is designed to be extensible, allowing new commands to be added with minimal effort.
 
+Note: To send a message that begins with a `/`, prefix it with an additional `/`. For example, `//hello` will be sent as `/hello`.
+
 The core of the system is a command definition table that maps command names to their respective handlers and defines the arguments they expect. When a user enters a command, the system parses the input, identifies the command, validates its arguments, and executes the corresponding handler function.
 
 ## 2. Core Components
@@ -127,3 +129,29 @@ To add a new command, follow these steps:
 4.  **Implement Handler Logic**: Implement the logic for `handle_my_command` in [`src/commands.c`](src/commands.c:1). You can use the provided arguments and the active buffer to perform the desired actions.
 
 By following these steps, you can easily extend `chatter` with new commands while maintaining a clean and organized codebase.
+
+## 6. Available Commands
+
+### /join
+
+*   **Usage**: `/join <channel>`
+*   **Description**: Joins the specified IRC channel.
+*   **Arguments**: `channel` (required): The name of the channel to join (e.g., `#chatter`).
+
+### /part
+
+*   **Usage**: `/part [channel]`
+*   **Description**: Leaves the specified IRC channel. If no channel is provided, it will part the currently active channel.
+*   **Arguments**: `channel` (optional): The name of the channel to leave. If omitted, the current channel is used.
+
+### /nick
+
+*   **Usage**: `/nick <new_nickname>`
+*   **Description**: Changes your IRC nickname.
+*   **Arguments**: `new_nickname` (required): The new nickname to use.
+
+### /quit
+
+*   **Usage**: `/quit [message]`
+*   **Description**: Disconnects from the IRC server.
+*   **Arguments**: `message` (optional): A quit message to be sent to the server.

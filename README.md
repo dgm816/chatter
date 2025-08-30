@@ -27,7 +27,10 @@ This project uses CMake for its build system. To build the project, follow these
 
 ## Commands
 
-* `/nick &lt;new_nickname&gt;` - Changes your nickname on the server.
+*   `/join <channel>` - Joins the specified IRC channel.
+*   `/part [channel] [reason]` - Leaves the current or specified IRC channel.
+*   `/nick <new_nickname>` - Changes your nickname on the server.
+*   `/quit` - Disconnects from the server and exits the application.
 
 ## License
 
