@@ -473,7 +473,7 @@ static void tui_refresh_all(const char *input_buffer, int input_pos) {
     
     int win_height, win_width;
     getmaxyx(main_buffer_win, win_height, win_width);
-    prefresh(main_buffer_pad, active_buffer->scroll_offset, 0, 1, BUFFER_LIST_WIDTH + 1, win_height - 2, BUFFER_LIST_WIDTH + win_width - 2);
+    prefresh(main_buffer_pad, active_buffer->scroll_offset, 1, 1, BUFFER_LIST_WIDTH + 1, win_height - 2, BUFFER_LIST_WIDTH + win_width - 2);
 
     // Redraw status bar
     wclear(status_bar_win);
