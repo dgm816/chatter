@@ -338,6 +338,15 @@ int irc_process_buffer(Irc *irc, bool *needs_refresh, char *out_command_buf, int
                             channel_buffer = create_buffer(joined_channel_param);
                             add_buffer(channel_buffer);
                             set_active_buffer(channel_buffer);
+                        }
+                    }
+
+                    buffer_node_t *channel_buffer = get_buffer_by_name(joined_channel_param);
+                    if (channel_buffer) {
+                        char join_msg[MAX_MSG_LEN];
+                        snprintf(join_msg, sizeof(join_msg), "%s has joined %s", sender_nick, joined_channel_param);
+                        buffer_append_message(channel_buffer, join_msg);
+                        if (channel_buffer == active_buffer) {
                             *needs_refresh = true;
                         }
                     }
